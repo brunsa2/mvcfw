@@ -6,7 +6,8 @@ class Router {
             foreach($routeTable as $routeKey => $route) {
                 $scanner = new RouteScanner($route->url);
                 $parser = new RouteParser($scanner);
-                $compiledRoute = $parser->parse();
+                $parsedRoute = $parser->parse();
+                $parsedRoute->compile();
                 $parser->displayErrors();
             }
         }

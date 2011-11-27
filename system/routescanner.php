@@ -278,8 +278,12 @@ abstract class Token {
 class TextToken extends Token {
     protected $text;
     
-    public function TextToken($text) {
+    public function __construct($text) {
         $this->text = $text;
+    }
+    
+    public function getValue() {
+        return $this->text;
     }
     
     public static function getTypeName() {

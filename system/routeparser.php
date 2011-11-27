@@ -29,30 +29,33 @@ class RouteParser {
     }
     
     public function parse() {
-        echo '<pre>';
-        $this->parseList();
+        $list = new ListNode();
+        $this->parseList($list);
         if(!$this->continueParsing) {
-            return;
+            return null;
         }
         $this->scanner->match('End');
-        echo '</pre>';
+        return $list;
     }
     
-    private function parseList() {
+    private function parseList($list) {
         switch($this->scanner->peek()) {
             case 'Text':
             case 'Slash':
             case 'OpeningBrace':
-                $this->parseItem();
+                $item = $this->parseItem();
                 if(!$this->continueParsing) {
-                    return;
+                    return null;
                 }
-                $this->parseList();
+                $list->push($item);
+                $this->parseList($list);
                 break;
             case 'End':
+                return null;
                 break;
             default:
                 $this->error('Unidentified text in routing string');
+                return null;
                 break;
         }
     }
@@ -60,57 +63,70 @@ class RouteParser {
     private function parseItem() {
         switch($this->scanner->peek()) {
             case 'Text':
-                if($this->scanner->match('MatchText') == null) {
+                $text = $this->scanner->match('MatchText');
+                if($text == null) {
                     $this->error('Unexpected character in match text');
                     $this->scanner->advanceOneCharacter();
                     $this->continueAfterError();
                 }
-                break;
+                return new TextNode($text->getValue());
             case 'Slash':
                 $this->scanner->match('Slash');
-                break;
+                return new DirectorySeparatorNode();
             case 'OpeningBrace':
                 $this->scanner->match('OpeningBrace');
-                $this->parsePlaceholder();
+                $placeholder = $this->parsePlaceholder();
                 if(!$this->continueParsing) {
                     $this->scanner->advancePastClosingBrace();
                     $this->continueAfterError();
-                    return;
+                    return null;
                 }
                 if($this->scanner->match('ClosingBrace') == null) {
                     $this->error('Did not find expected }');
                 }
-                break;
+                return $placeholder;
         }
+        return 'Item';
     }
     
     private function parsePlaceholder() {
         switch($this->scanner->peek()) {
             case 'PlusSign':
+                $placeholder = new OptionalPlaceholderNode();
                 $this->scanner->match('PlusSign');
-                if($this->scanner->match('IdentifierText') == null) {
+                $identifier = $this->scanner->match('IdentifierText');
+                if($identifier == null) {
                     $this->error('Did not find expected identifier');
                 }
                 if(!$this->continueParsing) {
-                    return;
+                    return null;
                 }
-                $this->parseRegex();
-                break;
+                $regex = $this->parseRegex();
+                $placeholder->setIdentifier($identifier->getValue());
+                $placeholder->setRegex($regex);
+                return $placeholder;
             case 'Asterisk':
+                $placeholder = new AbsorbingPlaceholderNode();
                 $this->scanner->match('Asterisk');
-                if($this->scanner->match('IdentifierText') == null) {
+                $identifier = $this->scanner->match('IdentifierText');
+                if($identifier == null) {
                     $this->error('Did not find expected identifier');
                 }
-                break;
+                $placeholder->setIdentifier($identifier->getValue());
+                return $placeholder;
             case 'Text':
-                if($this->scanner->match('IdentifierText') == null) {
+                $placeholder = new RequiredPlaceholderNode();
+                $identifier = $this->scanner->match('IdentifierText');
+                if($identifier == null) {
                     $this->error('Did not find expected identifer');
                 }
                 if(!$this->continueParsing) {
-                    return;
+                    return null;
                 }
-                $this->parseRegex();
-                break;
+                $regex = $this->parseRegex();
+                $placeholder->setIdentifier($identifier->getValue());
+                $placeholder->setRegex($regex);
+                return $placeholder;
         }
     }
     
@@ -118,7 +134,8 @@ class RouteParser {
         switch($this->scanner->peek()) {
             case 'Slash':
                 $this->scanner->match('Slash');
-                if($this->scanner->match('RegexText') == null) {
+                $regex = $this->scanner->match('RegexText');
+                if($regex == null) {
                     $this->error('Did not find expected regex');
                 }
                 if(!$this->continueParsing) {
@@ -127,12 +144,68 @@ class RouteParser {
                 if($this->scanner->match('Slash') == null) {
                     $this->error('Did not find expected /');
                 }
-                break;
+                return $regex->getValue();
             case 'ClosingBrace':
-                break;
+                return '';
             default:
                 $this->error('Did not find expected regex string or }');
-                break;
+                return null;
         }
     }
+}
+
+class Node {
+    
+}
+
+class ListNode extends Node {
+    private $items = array();
+    
+    public function push($item) {
+        array_push($this->items, $item);
+    }
+    
+    public function compile() {
+        echo '<pre>', print_r($this, true), '</pre><br />';
+    }
+}
+
+class TextNode extends Node {
+    private $text;
+    
+    public function __construct($text) {
+        $this->text = $text;
+    }
+}
+
+class DirectorySeparatorNode extends Node {
+    
+}
+
+class PlaceholderNode extends Node {
+    protected $identifier;
+    
+    public function setIdentifier($identifier) {
+        $this->identifier = $identifier;
+    }
+}
+
+class RequiredPlaceholderNode extends PlaceholderNode {
+    private $regex = '';
+    
+    public function setRegex($regex) {
+        $this->regex = $regex;
+    }
+}
+
+class OptionalPlaceholderNode extends PlaceholderNode {
+    private $regex = '';
+    
+    public function setRegex($regex) {
+        $this->regex = $regex;
+    }
+}
+
+class AbsorbingPlaceholderNode extends PlaceholderNode {
+    
 }
