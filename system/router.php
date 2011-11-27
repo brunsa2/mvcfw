@@ -8,7 +8,9 @@ class Router {
                 $parser = new RouteParser($scanner);
                 $parsedRoute = $parser->parse();
                 $parsedRoute->compile();
+                echo '<pre>';
                 $parser->displayErrors();
+                echo '</pre><br />';
             }
         }
     }

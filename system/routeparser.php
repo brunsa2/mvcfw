@@ -1,7 +1,7 @@
 <?php
 
 class RouteParser {
-    private $scanner, $continueParsing = true;
+    private $scanner;
     private $errors = array();
     
     public function __construct($scanner) {
@@ -9,7 +9,6 @@ class RouteParser {
     }
     
     private function error($message) {
-        $this->continueParsing = false;
         $error = array();
         $error['column'] = $this->scanner->getPosition();
         $error['message'] = $message;
@@ -24,16 +23,9 @@ class RouteParser {
         }
     }
     
-    private function continueAfterError() {
-        $this->continueParsing = true;
-    }
-    
     public function parse() {
         $list = new ListNode();
         $this->parseList($list);
-        if(!$this->continueParsing) {
-            return null;
-        }
         $this->scanner->match('End');
         return $list;
     }
@@ -44,11 +36,10 @@ class RouteParser {
             case 'Slash':
             case 'OpeningBrace':
                 $item = $this->parseItem();
-                if(!$this->continueParsing) {
-                    return null;
+                if($item != null) {
+                    $list->push($item);
+                    $this->parseList($list);
                 }
-                $list->push($item);
-                $this->parseList($list);
                 break;
             case 'End':
                 return null;
@@ -67,7 +58,7 @@ class RouteParser {
                 if($text == null) {
                     $this->error('Unexpected character in match text');
                     $this->scanner->advanceOneCharacter();
-                    $this->continueAfterError();
+                    return null;
                 }
                 return new TextNode($text->getValue());
             case 'Slash':
@@ -78,7 +69,6 @@ class RouteParser {
                 $placeholder = $this->parsePlaceholder();
                 if(!$this->continueParsing) {
                     $this->scanner->advancePastClosingBrace();
-                    $this->continueAfterError();
                     return null;
                 }
                 if($this->scanner->match('ClosingBrace') == null) {
@@ -86,7 +76,6 @@ class RouteParser {
                 }
                 return $placeholder;
         }
-        return 'Item';
     }
     
     private function parsePlaceholder() {
@@ -97,8 +86,6 @@ class RouteParser {
                 $identifier = $this->scanner->match('IdentifierText');
                 if($identifier == null) {
                     $this->error('Did not find expected identifier');
-                }
-                if(!$this->continueParsing) {
                     return null;
                 }
                 $regex = $this->parseRegex();
@@ -111,6 +98,7 @@ class RouteParser {
                 $identifier = $this->scanner->match('IdentifierText');
                 if($identifier == null) {
                     $this->error('Did not find expected identifier');
+                    return null;
                 }
                 $placeholder->setIdentifier($identifier->getValue());
                 return $placeholder;
@@ -119,8 +107,6 @@ class RouteParser {
                 $identifier = $this->scanner->match('IdentifierText');
                 if($identifier == null) {
                     $this->error('Did not find expected identifer');
-                }
-                if(!$this->continueParsing) {
                     return null;
                 }
                 $regex = $this->parseRegex();
@@ -137,19 +123,18 @@ class RouteParser {
                 $regex = $this->scanner->match('RegexText');
                 if($regex == null) {
                     $this->error('Did not find expected regex');
-                }
-                if(!$this->continueParsing) {
-                    return;
+                    return null;
                 }
                 if($this->scanner->match('Slash') == null) {
                     $this->error('Did not find expected /');
+                    return null;
                 }
                 return $regex->getValue();
             case 'ClosingBrace':
                 return '';
             default:
                 $this->error('Did not find expected regex string or }');
-                return null;
+                return '';
         }
     }
 }
