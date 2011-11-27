@@ -52,6 +52,30 @@ class RouteScanner {
         $this->position += $token->getLength();
     }
     
+    public function advancePastSlash() {
+        while($this->hasCharacter()) {
+            $character = $this->nextCharacter();
+            if(!$this->isSlash($character)) {
+                $this->position++;
+            } else {
+                $this->position++;
+                return;
+            }
+        }
+    }
+    
+    public function advancePastClosingBrace() {
+        while($this->hasCharacter()) {
+            $character = $this->nextCharacter();
+            if(!$this->isClosingBrace($character)) {
+                $this->position++;
+            } else {
+                $this->position++;
+                return;
+            }
+        }
+    }
+    
     public function getPosition() {
         return $this->position + 1;
     }
@@ -113,10 +137,12 @@ class RouteScanner {
                 $text = '';
                 $pointer = 0;
                 if(!$this->hasCharacterAtPointer($pointer)) {
+                    echo 'Text is (1) ', $text, '<br />'; 
                     return null;
                 }
                 $character = $this->getCharacterAtPointer($pointer);
                 if(!$this->isMatchTextCharacter($character)) {
+                    echo 'Text is (2) ', $text, '<br />'; 
                     return null;
                 }
                 while($this->hasCharacterAtPointer($pointer)) {

@@ -13,6 +13,10 @@ class RouteParser {
                 ': ', $message, '<br />', $this->scanner->getText(), '<br />', $this->scanner->getCaratLine(), '<br />';
     }
     
+    private function continueAfterError() {
+        $this->continueParsing = true;
+    }
+    
     public function parse() {
         echo '<pre>';
         $this->parseList();
@@ -47,6 +51,8 @@ class RouteParser {
             case 'Text':
                 if($this->scanner->match('MatchText') == null) {
                     $this->error('Unexpected character in match text');
+                    $this->scanner->advancePastSlash();
+                    $this->continueAfterError();
                 }
                 break;
             case 'Slash':
@@ -56,6 +62,8 @@ class RouteParser {
                 $this->scanner->match('OpeningBrace');
                 $this->parsePlaceholder();
                 if(!$this->continueParsing) {
+                    $this->scanner->advancePastClosingBrace();
+                    $this->continueAfterError();
                     return;
                 }
                 if($this->scanner->match('ClosingBrace') == null) {
