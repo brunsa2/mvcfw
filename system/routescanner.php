@@ -12,9 +12,9 @@ class RouteScanner {
         return $this->text;
     }
     
-    public function getCaratLine() {
+    public function getCaratLine($position) {
         $spaces = '';
-        for($spaceIndex = 0; $spaceIndex < $this->position; $spaceIndex++) {
+        for($spaceIndex = 0; $spaceIndex < $position - 1; $spaceIndex++) {
             $spaces .= ' ';
         }
         return $spaces . '^';
@@ -52,16 +52,8 @@ class RouteScanner {
         $this->position += $token->getLength();
     }
     
-    public function advancePastSlash() {
-        while($this->hasCharacter()) {
-            $character = $this->nextCharacter();
-            if(!$this->isSlash($character)) {
-                $this->position++;
-            } else {
-                $this->position++;
-                return;
-            }
-        }
+    public function advanceOneCharacter() {
+        $this->position++;
     }
     
     public function advancePastClosingBrace() {
@@ -137,12 +129,10 @@ class RouteScanner {
                 $text = '';
                 $pointer = 0;
                 if(!$this->hasCharacterAtPointer($pointer)) {
-                    echo 'Text is (1) ', $text, '<br />'; 
                     return null;
                 }
                 $character = $this->getCharacterAtPointer($pointer);
                 if(!$this->isMatchTextCharacter($character)) {
-                    echo 'Text is (2) ', $text, '<br />'; 
                     return null;
                 }
                 while($this->hasCharacterAtPointer($pointer)) {

@@ -2,6 +2,7 @@
 
 class RouteParser {
     private $scanner, $continueParsing = true;
+    private $errors = array();
     
     public function __construct($scanner) {
         $this->scanner = $scanner;
@@ -9,8 +10,18 @@ class RouteParser {
     
     private function error($message) {
         $this->continueParsing = false;
-        echo 'Column ', $this->scanner->getPosition(),
-                ': ', $message, '<br />', $this->scanner->getText(), '<br />', $this->scanner->getCaratLine(), '<br />';
+        $error = array();
+        $error['column'] = $this->scanner->getPosition();
+        $error['message'] = $message;
+        array_push($this->errors, $error);
+    }
+    
+    public function displayErrors() {
+        foreach($this->errors as $error) {
+            echo 'Column ', $error['column'], ': ', $error['message'], '<br />';
+            echo $this->scanner->getText(), '<br />';
+            echo $this->scanner->getCaratLine($error['column']), '<br />';
+        }
     }
     
     private function continueAfterError() {
@@ -51,7 +62,7 @@ class RouteParser {
             case 'Text':
                 if($this->scanner->match('MatchText') == null) {
                     $this->error('Unexpected character in match text');
-                    $this->scanner->advancePastSlash();
+                    $this->scanner->advanceOneCharacter();
                     $this->continueAfterError();
                 }
                 break;
