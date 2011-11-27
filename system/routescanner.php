@@ -44,14 +44,6 @@ class RouteScanner {
         return substr($this->text, $this->position, 1);
     }
     
-    public function getCharacterAtPointer($pointer) {
-        return substr($this->text, $this->position + $pointer, 1);
-    }
-    
-    public function advance($token) {
-        $this->position += $token->getLength();
-    }
-    
     public function advanceOneCharacter() {
         $this->position++;
     }
@@ -84,7 +76,7 @@ class RouteScanner {
                 $character = $this->nextCharacter();
                 if(self::isOpeningBrace($character)) {
                     $token = new OpeningBraceToken();
-                    $this->advance($token);
+                    $this->position += $token->getLength();
                     return $token;
                 } else {
                     return null;
@@ -93,7 +85,7 @@ class RouteScanner {
                 $character = $this->nextCharacter();
                 if(self::isClosingBrace($character)) {
                     $token = new ClosingBraceToken();
-                    $this->advance($token);
+                    $this->position += $token->getLength();
                     return $token;
                 } else {
                     return null;
@@ -102,7 +94,7 @@ class RouteScanner {
                 $character = $this->nextCharacter();
                 if(self::isPlusSign($character)) {
                     $token = new PlusSignToken();
-                    $this->advance($token);
+                    $this->position += $token->getLength();
                     return $token;
                 } else {
                     return null;
@@ -111,7 +103,7 @@ class RouteScanner {
                 $character = $this->nextCharacter();
                 if(self::isAsterisk($character)) {
                     $token = new AsteriskToken();
-                    $this->advance($token);
+                    $this->position += $token->getLength();
                     return $token;
                 } else {
                     return null;
@@ -120,102 +112,92 @@ class RouteScanner {
                 $character = $this->nextCharacter();
                 if(self::isSlash($character)) {
                     $token = new SlashToken();
-                    $this->advance($token);
+                    $this->position += $token->getLength();
                     return $token;
                 } else {
                     return null;
                 }
             case 'MatchText':
                 $text = '';
-                $pointer = 0;
-                if(!$this->hasCharacterAtPointer($pointer)) {
+                if(!$this->hasCharacter()) {
                     return null;
                 }
-                $character = $this->getCharacterAtPointer($pointer);
+                $character = $this->nextCharacter();
                 if(!$this->isMatchTextCharacter($character)) {
                     return null;
                 }
-                while($this->hasCharacterAtPointer($pointer)) {
-                    $character = $this->getCharacterAtPointer($pointer);
+                while($this->hasCharacter()) {
+                    $character = $this->nextCharacter();
                     if($this->isMatchTextCharacter($character)) {
                         $text .= $character;
-                        $pointer++;
+                        $this->position++;
                     } else {
                         $token = new MatchTextToken($text);
-                        $this->advance($token);
                         return $token;
                     }
                 }
                 $token = new MatchTextToken($text);
-                $this->advance($token);
                 return $token;
             case 'IdentifierText':
                 $text = '';
-                $pointer = 0;
-                if(!$this->hasCharacterAtPointer($pointer)) {
+                if(!$this->hasCharacter()) {
                     return null;
                 }
-                $character = $this->getCharacterAtPointer($pointer);
+                $character = $this->nextCharacter();
                 if($this->isLetter($character) || $this->isUnderscore($character)) {
                     $text = $character;
-                    $pointer = 1;
+                    $this->position++;
                 } else {
                     return null;
                 }
-                $character = $this->getCharacterAtPointer($pointer);
+                $character = $this->nextCharacter();
                 if($this->isNotIdentifierCharacter($character)) {
                     $token = new IdentifierToken($text);
-                    $this->advance($token);
                     return $token;
                 }
-                while($this->hasCharacterAtPointer($pointer)) {
-                    $character = $this->getCharacterAtPointer($pointer);
+                while($this->hasCharacter()) {
+                    $character = $this->nextCharacter();
                     if($this->isAlphanumeric($character) || $this->isUnderscore($character)) {
                         $text .= $character;
-                        $pointer++;
+                        $this->position++;
                     } else {
                         $token = new IdentifierToken($text);
-                        $this->advance($token);
                         return $token;
                     }
                 }
                 $token = new IdentifierToken($text);
-                $this->advance($token);
                 return $token;
             case 'RegexText':
                 $text = '';
-                $pointer = 0;
                 $numberOfSlashes = 0;
-                if(!$this->hasCharacterAtPointer($pointer)) {
+                if(!$this->hasCharacter()) {
                     return null;
                 }
-                $character = $this->getCharacterAtPointer($pointer);
+                $character = $this->nextCharacter();
                 if(!($this->isRegexCharacter($character) || $this->isBackslash($character))) {
                     return null;
                 }
-                while($this->hasCharacterAtPointer($pointer)) {
-                    $character = $this->getCharacterAtPointer($pointer);
+                while($this->hasCharacter()) {
+                    $character = $this->nextCharacter();
                     if($this->isRegexCharacter($character)) {
                         $text .= $character;
-                        $pointer++;
+                        $this->position++;
                     } else if($this->isBackslash($character)) {
-                        $pointer++;
+                        $this->position++;
                         $numberOfSlashes++;
-                        $character = $this->getCharacterAtPointer($pointer);
+                        $character = $this->nextCharacter();
                         if($this->isBackslash($character) || $this->isSlash($character)) {
                             $text .= $character;
-                            $pointer++;
+                            $this->position++;
                         } else {
                             return null;
                         }
                     } else {
                         $token = new RegexToken($text, $numberOfSlashes);
-                        $this->advance($token);
                         return $token;
                     }
                 }
                 $token = new RegexToken($text, $numberOfSlashes);
-                $this->advance($token);
                 return $token;
             default:
                 return null;
@@ -224,10 +206,6 @@ class RouteScanner {
     
     private function hasCharacter() {
         return $this->position < strlen($this->text);
-    }
-    
-    private function hasCharacterAtPointer($pointer) {
-        return $this->position + $pointer < strlen($this->text);
     }
     
     private static function isMatchTextCharacter($character) {
