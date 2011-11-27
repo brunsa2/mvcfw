@@ -124,8 +124,6 @@ class RouteScanner {
                     if($this->isMatchTextCharacter($character)) {
                         $text .= $character;
                         $pointer++;
-                    } else if($this->isNotMatchTextCharacter($character)) {
-                        return null;
                     } else {
                         $token = new MatchTextToken($text);
                         $this->advance($token);
@@ -159,8 +157,6 @@ class RouteScanner {
                     if($this->isAlphanumeric($character) || $this->isUnderscore($character)) {
                         $text .= $character;
                         $pointer++;
-                    } else if($this->isNotIdentifierCharacter($character)) {
-                        return null;
                     } else {
                         $token = new IdentifierToken($text);
                         $this->advance($token);
